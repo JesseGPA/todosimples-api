@@ -1,0 +1,12 @@
+{"properties": [
+    {
+    "name": "jwt.secret",
+    "type": "java.lang.String",
+    "description": "Secret used by JWT to generate tokens"
+    },
+    {
+        "name": "jwt.expiration",
+        "type": "java.lang.Long",
+        "description": "Seconds added to actual date used to define expiration date in JWT"
+    }
+]}

@@ -1,10 +1,12 @@
 package com.jessealves.todosimples.services;
 
+import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -12,6 +14,8 @@ import org.springframework.transaction.annotation.Transactional;
 import com.jessealves.todosimples.models.User;
 import com.jessealves.todosimples.models.enums.ProfileEnum;
 import com.jessealves.todosimples.repositories.UserRepository;
+import com.jessealves.todosimples.security.UserSpringSecurity;
+import com.jessealves.todosimples.services.exceptions.AuthorizationException;
 import com.jessealves.todosimples.services.exceptions.DataBindingViolationException;
 import com.jessealves.todosimples.services.exceptions.ObjectNotFoundException;
 
@@ -25,6 +29,12 @@ public class UserService {
     private UserRepository userRepository;
 
     public User findById(Long id) {
+        UserSpringSecurity userSpringSecurity = authenticated();
+
+        if (Objects.isNull(userSpringSecurity) || !userSpringSecurity.hasRole(ProfileEnum.ADMIN) && !id.equals(userSpringSecurity.getId())) {
+            throw new AuthorizationException("Acesso negado");
+        }
+
         Optional<User> user = this.userRepository.findById(id);
 
         return user.orElseThrow(() -> new ObjectNotFoundException(
@@ -57,6 +67,14 @@ public class UserService {
             this.userRepository.deleteById(id);
         } catch (Exception e) {
             throw new DataBindingViolationException("Não é possível excluir pois há entidades relacionadas");
+        }
+    }
+
+    public static UserSpringSecurity authenticated() {
+        try {
+            return (UserSpringSecurity) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+        } catch (Exception e) {
+            return null;
         }
     }
 }

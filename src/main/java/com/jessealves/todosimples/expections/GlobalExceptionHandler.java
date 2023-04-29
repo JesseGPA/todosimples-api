@@ -11,6 +11,7 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.web.authentication.AuthenticationFailureHandler;
 import org.springframework.validation.FieldError;
@@ -21,6 +22,7 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.context.request.WebRequest;
 import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExceptionHandler;
 
+import com.jessealves.todosimples.services.exceptions.AuthorizationException;
 import com.jessealves.todosimples.services.exceptions.DataBindingViolationException;
 import com.jessealves.todosimples.services.exceptions.ObjectNotFoundException;
 
@@ -96,7 +98,7 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler imple
 
     @ExceptionHandler(DataBindingViolationException.class)
     @ResponseStatus(HttpStatus.CONFLICT)
-    public ResponseEntity<Object> handleObjectNotFoundException(
+    public ResponseEntity<Object> handleDataBindingViolationException(
             DataBindingViolationException dataBindingViolationException,
             WebRequest request
     ) {
@@ -104,6 +106,42 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler imple
         log.error("Falha ao salvar elemento que possui dados associados: " + errorMessage, dataBindingViolationException);
 
         return buildErrorResponse(dataBindingViolationException, errorMessage, HttpStatus.CONFLICT);
+    }
+
+    @ExceptionHandler(AuthenticationException.class)
+    @ResponseStatus(HttpStatus.UNAUTHORIZED)
+    public ResponseEntity<Object> handleAuthenticationException(
+        AuthenticationException authenticationException,
+            WebRequest request
+    ) {
+        String errorMessage = authenticationException.getMessage();
+        log.error("Falha de autenticação", authenticationException);
+
+        return buildErrorResponse(authenticationException, errorMessage, HttpStatus.UNAUTHORIZED);
+    }
+
+    @ExceptionHandler(AccessDeniedException.class)
+    @ResponseStatus(HttpStatus.FORBIDDEN)
+    public ResponseEntity<Object> handleAccessDeniedException(
+        AccessDeniedException accessDeniedException,
+            WebRequest request
+    ) {
+        String errorMessage = accessDeniedException.getMessage();
+        log.error("Falha de autorização", accessDeniedException);
+
+        return buildErrorResponse(accessDeniedException, errorMessage, HttpStatus.FORBIDDEN);
+    }
+
+    @ExceptionHandler(AuthorizationException.class)
+    @ResponseStatus(HttpStatus.FORBIDDEN)
+    public ResponseEntity<Object> handleAuthorizationException(
+        AuthorizationException authorizationException,
+            WebRequest request
+    ) {
+        String errorMessage = "Falha de autorização";
+        log.error("Falha de autorização", authorizationException);
+
+        return buildErrorResponse(authorizationException, errorMessage, HttpStatus.FORBIDDEN);
     }
     
     private ResponseEntity<Object> buildErrorResponse(

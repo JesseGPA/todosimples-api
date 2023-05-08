@@ -3,7 +3,9 @@ package com.jessealves.todosimples.controllers;
 import java.net.URI;
 import java.util.List;
 
+import javax.validation.ConstraintViolationException;
 import javax.validation.Valid;
+import javax.validation.constraints.Min;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -24,7 +26,7 @@ import com.jessealves.todosimples.models.projection.TaskProjection;
 import com.jessealves.todosimples.services.TaskService;
 
 @RestController
-@RequestMapping("/task")
+@RequestMapping("/tasks")
 @Validated
 public class TaskController {
     
@@ -32,21 +34,22 @@ public class TaskController {
     private TaskService taskService;
 
     @GetMapping("/{id}")
-    public ResponseEntity<Task> findById(@PathVariable Long id) {
+    public ResponseEntity<Task> findById(@PathVariable @Min(1) Long id) {
         Task task = this.taskService.findById(id);
         return ResponseEntity.ok().body(task);
     }
 
-    @GetMapping("/user")
-    public ResponseEntity<List<TaskProjection>> findAllByUser() {
-        List<TaskProjection> tasks = this.taskService.findAllByUser();
+    @PreAuthorize("hasRole('ROLE_ADMIN')")
+    @GetMapping
+    public ResponseEntity<List<Task>> findAll() {
+        List<Task> tasks = this.taskService.findAll();
         return ResponseEntity.ok().body(tasks);
     }
 
     @PreAuthorize("hasRole('ROLE_ADMIN')")
-    @GetMapping("/all")
-    public ResponseEntity<List<Task>> findAll() {
-        List<Task> tasks = this.taskService.findAll();
+    @GetMapping("/user/{userId}")
+    public ResponseEntity<List<TaskProjection>> findAllByUser(@PathVariable @Min(1) Long userId) {
+        List<TaskProjection> tasks = this.taskService.findAllByUser(userId);
         return ResponseEntity.ok().body(tasks);
     }
 
@@ -58,14 +61,16 @@ public class TaskController {
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<Void> update(@Valid @RequestBody Task task, @PathVariable Long id) {
-        task.setId(id);
+    public ResponseEntity<Void> update(@Valid @RequestBody Task task, @PathVariable @Min(1) Long id) {
+        if (!id.equals(task.getId())) {
+            throw new ConstraintViolationException("O id informado no parâmetro da requisição não corresponde com o id informado no corpo da requisição.", null);
+        }
         this.taskService.update(task);
         return ResponseEntity.noContent().build();
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> delete(@PathVariable Long id) {
+    public ResponseEntity<Void> delete(@PathVariable @Min(1) Long id) {
         this.taskService.delete(id);
         return ResponseEntity.noContent().build();
     }

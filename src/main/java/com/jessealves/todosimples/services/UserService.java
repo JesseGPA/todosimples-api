@@ -1,11 +1,9 @@
 package com.jessealves.todosimples.services;
 
-import java.util.Objects;
+import java.util.List;
 import java.util.Optional;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
-import javax.validation.Valid;
+import javax.validation.ConstraintViolationException;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -13,44 +11,36 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.jessealves.todosimples.models.Task;
 import com.jessealves.todosimples.models.User;
-import com.jessealves.todosimples.models.dto.UserCreateDTO;
-import com.jessealves.todosimples.models.dto.UserUpdateDTO;
-import com.jessealves.todosimples.models.enums.ProfileEnum;
 import com.jessealves.todosimples.repositories.UserRepository;
 import com.jessealves.todosimples.security.UserSpringSecurity;
-import com.jessealves.todosimples.services.exceptions.AuthorizationException;
-import com.jessealves.todosimples.services.exceptions.DataBindingViolationException;
 import com.jessealves.todosimples.services.exceptions.ObjectNotFoundException;
 
 @Service
 public class UserService {
 
     @Autowired
-    private BCryptPasswordEncoder bCryptPasswordEncoder;
-
-    @Autowired
     private UserRepository userRepository;
 
+    public User findLoggedUser() {
+        Long id = ((UserSpringSecurity) SecurityContextHolder.getContext().getAuthentication().getPrincipal()).getId();
+
+        User user = findById(id);
+
+        return user;
+    }
+
     public User findById(Long id) {
-        UserSpringSecurity userSpringSecurity = authenticated();
-
-        if (Objects.isNull(userSpringSecurity) || !userSpringSecurity.hasRole(ProfileEnum.ADMIN) && !id.equals(userSpringSecurity.getId())) {
-            throw new AuthorizationException("Acesso negado");
-        }
-
         Optional<User> user = this.userRepository.findById(id);
 
         return user.orElseThrow(() -> new ObjectNotFoundException(
-            "Usuário não encontrado! Id: " + id + ", Tipo: " + User.class.getName()
+            "Usuário não encontrado! Id: " + id
         ));
     }
 
     @Transactional
     public User create(User obj) {
-        obj.setId(null);
-        obj.setPassword(this.bCryptPasswordEncoder.encode(obj.getPassword()));
-        obj.setProfiles(Stream.of(ProfileEnum.USER.getCode()).collect(Collectors.toSet()));
         obj = this.userRepository.save(obj);
 
         return obj;
@@ -60,41 +50,24 @@ public class UserService {
     public User update(User obj) {
         User newObj = findById(obj.getId());
         
-        newObj.setPassword(this.bCryptPasswordEncoder.encode(obj.getPassword()));
+        newObj.setPassword(encodePassword(obj.getPassword()));
 
         return this.userRepository.save(newObj);
     }
     
+    @Transactional
     public void delete(Long id) {
-        findById(id);
-        try {
-            this.userRepository.deleteById(id);
-        } catch (Exception e) {
-            throw new DataBindingViolationException("Não é possível excluir pois há entidades relacionadas");
-        }
+        User user = findById(id);
+        List<Task> tasks = this.userRepository.findTasksByUserId(user);
+        
+        if (!tasks.isEmpty())
+            throw new ConstraintViolationException("O usuário " + id + " possui tarefas relacionadas.", null);
+
+        this.userRepository.deleteById(id);
     }
 
-    public static UserSpringSecurity authenticated() {
-        try {
-            return (UserSpringSecurity) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
-        } catch (Exception e) {
-            return null;
-        }
-    }
-
-    public User fromDTO(@Valid UserCreateDTO obj) {
-        User user = new User();
-        user.setUsername(obj.getUsername());
-        user.setPassword(obj.getPassword());
-
-        return user;
-    }
-
-    public User fromDTO(@Valid UserUpdateDTO obj) {
-        User user = new User();
-        user.setId(obj.getId());
-        user.setPassword(obj.getPassword());
-
-        return user;
+    public static String encodePassword(String password) {
+        BCryptPasswordEncoder bCryptPasswordEncoder = new BCryptPasswordEncoder();
+        return bCryptPasswordEncoder.encode(password);
     }
 }

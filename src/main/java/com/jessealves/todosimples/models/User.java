@@ -4,18 +4,25 @@ import javax.persistence.CollectionTable;
 import javax.persistence.Column;
 import javax.persistence.ElementCollection;
 import javax.persistence.Entity;
+import javax.persistence.EnumType;
+import javax.persistence.Enumerated;
 import javax.persistence.FetchType;
 import javax.persistence.GeneratedValue;
 import javax.persistence.GenerationType;
 import javax.persistence.Id;
 import javax.persistence.OneToMany;
+import javax.persistence.PrePersist;
 import javax.persistence.Table;
 import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.Size;
 
+import org.hibernate.annotations.OnDelete;
+import org.hibernate.annotations.OnDeleteAction;
+
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonProperty.Access;
 import com.jessealves.todosimples.models.enums.ProfileEnum;
+import com.jessealves.todosimples.services.UserService;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -25,7 +32,6 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
-import java.util.stream.Collectors;
 
 @Entity
 @Table(name = User.TABLE_NAME)
@@ -54,20 +60,24 @@ public class User {
 
     @OneToMany(mappedBy = "user")
     @JsonProperty(access = Access.WRITE_ONLY)
+    @OnDelete(action = OnDeleteAction.NO_ACTION)
     private List<Task> tasks = new ArrayList<Task>();
 
     @ElementCollection(fetch = FetchType.EAGER)
     @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
     @CollectionTable(name = "user_profile")
     @Column(name = "profile", nullable = false)
-    private Set<Integer> profiles = new HashSet<>();
-
-    public Set<ProfileEnum> getProfiles() {
-        return this.profiles.stream().map(x -> ProfileEnum.toEnum(x)).collect(Collectors.toSet());
-    }
+    @Enumerated(EnumType.STRING)
+    private Set<ProfileEnum> profiles = new HashSet<>();
 
     public void addProfile(ProfileEnum profileEnum) {
-        this.profiles.add(profileEnum.getCode());
+        this.profiles.add(profileEnum);
+    }
+
+    @PrePersist
+    private void prePersistActions() {
+        password = UserService.encodePassword(password);
+        profiles.add(ProfileEnum.USER);
     }
 
 }

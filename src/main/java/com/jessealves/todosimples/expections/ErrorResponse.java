@@ -27,7 +27,7 @@ public class ErrorResponse {
 
     }
 
-    public void addValidationErro(String field, String message) {
+    public void addValidationError(String field, String message) {
         if (Objects.isNull((errors))) {
             this.errors = new ArrayList<>();
         }

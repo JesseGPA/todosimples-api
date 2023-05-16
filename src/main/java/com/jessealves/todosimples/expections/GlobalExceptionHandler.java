@@ -42,7 +42,7 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler imple
     ) {
         ErrorResponse errorResponse = new ErrorResponse(HttpStatus.UNPROCESSABLE_ENTITY.value(), "Erro de validação. Verifique o campo 'errors' para mais detalhes.");
         for(FieldError fieldError : methodArgumentNotValidException.getBindingResult().getFieldErrors()) {
-            errorResponse.addValidationErro(fieldError.getField(), fieldError.getDefaultMessage());
+            errorResponse.addValidationError(fieldError.getField(), fieldError.getDefaultMessage());
         }
 
         return ResponseEntity.unprocessableEntity().body(errorResponse);
@@ -78,7 +78,7 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler imple
             ConstraintViolationException constraintViolationException,
             WebRequest request
     ) {
-        String errorMessage = constraintViolationException.getMessage();
+        String errorMessage = "Falha de integridade de dados! " + constraintViolationException.getMessage();
         log.error("Falha ao salvar uma entidade com problemas de integridade: " + errorMessage, constraintViolationException);
 
         return buildErrorResponse(constraintViolationException, errorMessage, HttpStatus.UNPROCESSABLE_ENTITY);

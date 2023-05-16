@@ -39,7 +39,7 @@ public class UserController {
     @Autowired
     private TaskService taskService;
     
-    @GetMapping("/myUser")
+    @GetMapping("/me")
     public ResponseEntity<User> findMyUser() {
         User user = this.userService.findLoggedUser();
         return ResponseEntity.ok().body(user);

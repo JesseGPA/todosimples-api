@@ -16,9 +16,6 @@ import javax.persistence.Table;
 import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.Size;
 
-import org.hibernate.annotations.OnDelete;
-import org.hibernate.annotations.OnDeleteAction;
-
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonProperty.Access;
 import com.jessealves.todosimples.models.enums.ProfileEnum;
@@ -60,7 +57,6 @@ public class User {
 
     @OneToMany(mappedBy = "user")
     @JsonProperty(access = Access.WRITE_ONLY)
-    @OnDelete(action = OnDeleteAction.NO_ACTION)
     private List<Task> tasks = new ArrayList<Task>();
 
     @ElementCollection(fetch = FetchType.EAGER)
